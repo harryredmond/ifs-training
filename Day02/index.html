@@ -62,9 +62,9 @@ name: toc-module-0
 
 - [Kubectl](#toc-kubectl)
 
-- [Labels and Annotations](#toc-labels-and-annotations)
-
 - [Deployments](#toc-deployments)
+
+- [Labels and Annotations](#toc-labels-and-annotations)
 
 - [Volumes](#toc-volumes)
 
@@ -812,7 +812,7 @@ class: title
 |
 [Back to table of contents](#toc-module-0)
 |
-[Next section](#toc-labels-and-annotations)
+[Next section](#toc-deployments)
 ]
 
 .debug[(automatically generated title slide)]
@@ -1119,14 +1119,6 @@ class: extra-details
 
 ]
 
---
-
-*You know what ... This `kube-system` thing looks suspicious.*
-
-*In fact, I'm pretty sure it showed up earlier, when we did:*
-
-`kubectl describe node node1`
-
 .debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
 ---
 
@@ -1150,8 +1142,6 @@ class: extra-details
 
 ]
 
-*Here are our system pods!*
-
 .debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
 ---
 
@@ -1163,15 +1153,11 @@ class: extra-details
 
 - `kube-controller-manager` and `kube-scheduler` are other control plane components
 
-- `coredns` provides DNS-based service discovery ([replacing kube-dns as of 1.11](https://kubernetes.io/blog/2018/07/10/coredns-ga-for-kubernetes-cluster-dns/))
+- `coredns` provides DNS-based service discovery 
 
 - `kube-proxy` is the (per-node) component managing port mappings and such
 
-- `weave` is the (per-node) component managing the network overlay
-
 - the `READY` column indicates the number of containers in each pod
-
-  (1 for most pods, but `weave` has 2, for instance)
 
 .debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
 ---
@@ -1203,11 +1189,10 @@ class: extra-details
 
 - We can use `-A`/`--all-namespaces` with most commands that manipulate multiple objects
 
-- Examples:
 
-  - `kubectl delete` can delete resources across multiple namespaces
+- `kubectl delete` can delete resources across multiple namespaces
 
-  - `kubectl label` can add/remove/update labels across multiple namespaces
+- `kubectl label` can add/remove/update labels across multiple namespaces
 
 .debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
 ---
@@ -1327,125 +1312,6 @@ class: extra-details
 [KEP-0009]: https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/0009-node-heartbeat.md
 [node controller documentation]: https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller
 
-.debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
----
-
-## Services
-
-- A *service* is a stable endpoint to connect to "something"
-
-  (In the initial proposal, they were called "portals")
-
-.exercise[
-
-- List the services on our cluster with one of these commands:
-  ```bash
-  kubectl get services
-  kubectl get svc
-  ```
-
-]
-
---
-
-There is already one service on our cluster: the Kubernetes API itself.
-
-.debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
----
-
-## ClusterIP services
-
-- A `ClusterIP` service is internal, available from the cluster only
-
-- This is useful for introspection from within containers
-
-.exercise[
-
-- Try to connect to the API:
-  ```bash
-  curl -k https://`10.96.0.1`
-  ```
-
-  - `-k` is used to skip certificate verification
-
-  - Make sure to replace 10.96.0.1 with the CLUSTER-IP shown by `kubectl get svc`
-
-]
-
-The command above should either time out, or show an authentication error. Why?
-
-.debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
----
-
-## Time out
-
-- Connections to ClusterIP services only work *from within the cluster*
-
-- If we are outside the cluster, the `curl` command will probably time out
-
-  (Because the IP address, e.g. 10.96.0.1, isn't routed properly outside the cluster)
-
-- This is the case with most "real" Kubernetes clusters
-
-- To try the connection from within the cluster, we can use [shpod](https://github.com/jpetazzo/shpod)
-
-.debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
----
-
-## Authentication error
-
-This is what we should see when connecting from within the cluster:
-```json
-$ curl -k https://10.96.0.1
-{
-  "kind": "Status",
-  "apiVersion": "v1",
-  "metadata": {
-
-  },
-  "status": "Failure",
-  "message": "forbidden: User \"system:anonymous\" cannot get path \"/\"",
-  "reason": "Forbidden",
-  "details": {
-
-  },
-  "code": 403
-}
-```
-
-.debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
----
-
-## Explanations
-
-- We can see `kind`, `apiVersion`, `metadata`
-
-- These are typical of a Kubernetes API reply
-
-- Because we *are* talking to the Kubernetes API
-
-- The Kubernetes API tells us "Forbidden"
-
-  (because it requires authentication)
-
-- The Kubernetes API is reachable from within the cluster
-
-  (many apps integrating with Kubernetes will use this)
-
-.debug[[k8s/kubectlget.md](file:///home/xeon/urgent/slides/k8s/kubectlget.md)]
----
-
-## DNS integration
-
-- Each service also gets a DNS record
-
-- The Kubernetes DNS resolver is available *from within pods*
-
-  (and sometimes, from within nodes, depending on configuration)
-
-- Code running in pods can connect to services using their name
-
-  (e.g. https://servicename/...)
 
   
 
@@ -1458,17 +1324,417 @@ class: pic
 
 ---
 
-name: toc-labels-and-annotations
+name: toc-deployments
 class: title
 
- Labels and Annotations
+ Deployments
 
 .nav[
 [Previous section](#toc-kubectl)
 |
 [Back to table of contents](#toc-module-0)
 |
-[Next section](#toc-deployments)
+[Next section](#toc-labels-and-annotations)
+]
+
+.debug[(automatically generated title slide)]
+
+---
+# Deployments
+
+- Remember, we can't create containers directly
+
+- The desired state is described in a Deployment YAML file
+
+- A deployment creates Replicaset which creates Pods
+
+- The Deployment is a high level controller
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Pod
+
+- Can have one or multiple containers
+
+- Runs on a single node
+
+  (Pod cannot "straddle" multiple nodes)
+
+- Pods cannot be moved
+
+  (e.g. in case of node outage)
+
+- Pods cannot be scaled
+
+  (except by manually creating more Pods)
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+class: extra-details
+
+## Pod details
+
+- A Pod is not a process; it's an environment for containers
+
+  - it cannot be "restarted"
+
+  - it cannot "crash"
+
+- The containers in a Pod can crash
+
+- They may or may not get restarted
+
+  (depending on Pod's restart policy)
+
+- If all containers exit successfully, the Pod ends in "Succeeded" phase
+
+- If some containers fail and don't get restarted, the Pod ends in "Failed" phase
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Replica Set
+
+- Set of identical (replicated) Pods
+
+- Defined by a pod template + number of desired replicas
+
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## `kubectl run` 
+
+- From Kubernetes 1.18, `kubectl run` creates a Pod
+
+  - other kinds of resources can still be created with `kubectl create`
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Creating a Deployment 
+
+- Let's destroy that `pingpong` app that we created
+
+- Then we will use `kubectl create deployment` to re-create it
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+class: extra-details
+
+## In Kubernetes 1.19
+
+- Since Kubernetes 1.19, we can specify the command to run
+
+- The command must be passed after two dashes:
+  ```bash
+  kubectl create deployment pingpong --image=alpine -- ping 127.1
+  ```
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Viewing container output
+
+- Let's use the `kubectl logs` command
+
+- We will pass either a *pod name*, or a *type/name*
+
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Streaming logs in real time
+
+- Just like `docker logs`, `kubectl logs` supports convenient options:
+
+  - `-f`/`--follow` to stream logs in real time (à la `tail -f`)
+
+  - `--tail` to indicate how many lines you want to see (from the end)
+
+  - `--since` to get logs only after a given timestamp
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Scaling our application
+
+- We can create additional copies of our container (I mean, our pod) with `kubectl scale`
+
+.exercise[
+
+- Scale our `pingpong` deployment:
+  ```bash
+  kubectl scale deploy/pingpong --replicas 3
+  ```
+
+- Note that this command does exactly the same thing:
+  ```bash
+  kubectl scale deployment pingpong --replicas 3
+  ```
+
+- Check that we now have multiple pods:
+  ```bash
+  kubectl get pods
+  ```
+
+]
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+class: extra-details
+
+## Scaling a Replica Set
+
+- What if we scale the Replica Set instead of the Deployment?
+
+- The Deployment would notice it right away and scale back to the initial level
+
+- The Replica Set makes sure that we have the right numbers of Pods
+
+- The Deployment makes sure that the Replica Set has the right size
+
+  (conceptually, it delegates the management of the Pods to the Replica Set)
+
+- This might seem weird (why this extra layer?) but will soon make sense
+
+  (when we will look at how rolling updates work!)
+
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+
+## Lifecycle
+
+- What happens when a Pod gets created?
+
+--
+
+- Pod phases:
+
+--
+
+  - Pending
+
+--
+
+  - Running
+
+--
+
+  - Succeeded
+
+--
+
+  - Failed
+
+--
+
+  - Unknown
+
+--
+
+  - CrashLoopBackOff
+
+---
+.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
+---
+## 19,000 words
+
+They say, "a picture is worth one thousand words."
+
+The following 19 slides show what really happens when we run:
+
+```bash
+kubectl create deployment web --image=nginx
+```
+
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/01.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/02.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/03.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/04.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/05.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/06.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/07.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/08.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/09.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/10.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/11.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/12.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/13.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/14.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/15.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/16.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/17.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/18.svg)
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+class: pic
+![](images/kubectl-create-deployment-slideshow/19.svg)
+
+.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
+---
+## Declarative vs Imperative
+
+- With Kubernetes, we cannot say: "run this container"
+
+- All we can do is write a *spec* and push it to the API server
+
+- The API server will validate that spec 
+
+- Then it will store it in etcd
+
+- A *controller* will "notice" that spec and act upon it
+
+.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
+---
+
+## Deploying with YAML
+
+- So far, we created resources with the following commands:
+
+  - `kubectl run`
+
+  - `kubectl create deployment`
+
+- We can also create resources directly with YAML manifests
+
+.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
+---
+
+## `kubectl apply` vs `create`
+
+- `kubectl create -f whatever.yaml`
+
+  - creates resources if they don't exist
+
+  - if resources already exist, don't alter them
+    <br/>(and display error message)
+
+- `kubectl apply -f whatever.yaml`
+
+  - creates resources if they don't exist
+
+  - if resources already exist, update them
+    <br/>(to match the definition provided by the YAML file)
+
+  - stores the manifest as an *annotation* in the resource
+
+.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
+---
+
+## Creating multiple resources
+
+- The manifest can contain multiple resources separated by `---`
+
+```yaml
+ kind: ...
+ apiVersion: ...
+ metadata: ...
+   name: ...
+ ...
+ ---
+ kind: ...
+ apiVersion: ...
+ metadata: ...
+   name: ...
+ ...
+```
+.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
+---
+
+## Deleting resources
+
+- We can also use a YAML file to *delete* resources
+
+- `kubectl delete -f ...` will delete all the resources mentioned in a YAML file
+
+  (useful to clean up everything that was created by `kubectl apply -f ...`)
+
+- The definitions of the resources don't matter
+
+  (just their `kind`, `apiVersion`, and `name`)
+
+
+
+
+.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
+---
+
+class: pic
+
+.interstitial[![Image separating from the next module](https://gallant-turing-d0d520.netlify.com/containers/container-housing.jpg)]
+
+---
+
+name: toc-labels-and-annotations
+class: title
+
+ Labels and Annotations
+
+.nav[
+[Previous section](#toc-deployments)
+|
+[Back to table of contents](#toc-module-0)
+|
+[Next section](#toc-volumes)
 ]
 
 .debug[(automatically generated title slide)]
@@ -1669,892 +1935,8 @@ class: extra-details
 
   Examples: `kubectl delete`, `kubectl label`, ...
 
-.debug[[k8s/labels-annotations.md](file:///home/xeon/urgent/slides/k8s/labels-annotations.md)]
----
-
-## Other ways to view labels
-
-- We can use the `--show-labels` flag with `kubectl get`
-
-.exercise[
-
-- Show labels for a bunch of objects:
-  ```bash
-  kubectl get --show-labels po,rs,deploy,svc,no
-  ```
-
-]
 
 .debug[[k8s/labels-annotations.md](file:///home/xeon/urgent/slides/k8s/labels-annotations.md)]
----
-
-## Differences between labels and annotations
-
-- The *key* for both labels and annotations:
-
-  - must start and end with a letter or digit
-
-  - can also have `.` `-` `_` (but not in first or last position)
-
-  - can be up to 63 characters, or 253 + `/` + 63
-
-- Label *values* are up to 63 characters, with the same restrictions
-
-- Annotations *values* can have arbitrary characters (yes, even binary)
-
-- Maximum length isn't defined
-
-  (dozens of kilobytes is fine, hundreds maybe not so much)
-
-???
-
-:EN:- Labels and annotations
-:FR:- *Labels* et annotations
-
-.debug[[k8s/labels-annotations.md](file:///home/xeon/urgent/slides/k8s/labels-annotations.md)]
----
-
-class: pic
-
-.interstitial[![Image separating from the next module](https://gallant-turing-d0d520.netlify.com/containers/container-housing.jpg)]
-
----
-
-name: toc-deployments
-class: title
-
- Deployments
-
-.nav[
-[Previous section](#toc-labels-and-annotations)
-|
-[Back to table of contents](#toc-module-0)
-|
-[Next section](#toc-volumes)
-]
-
-.debug[(automatically generated title slide)]
-
----
-# Deployments
-
-- First things first: we cannot run a container
-
---
-
-- We are going to run a pod, and in that pod there will be a single container
-
---
-
-- In that container in the pod, we are going to run a simple `ping` command
-
---
-
-- Sounds simple enough, right?
-
---
-
-- Except ... that the `kubectl run` command changed in Kubernetes 1.18!
-
-- We'll explain what has changed, and why
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Choose your own adventure
-
-- First, let's check which version of Kubernetes we're running
-
-.exercise[
-
-- Check our API server version:
-  ```bash
-  kubectl version
-  ```
-
-- Look at the **Server Version** in the second part of the output
-
-]
-
-- In the following slides, we will talk about 1.17- or 1.18+
-
-  (to indicate "up to Kubernetes 1.17" and "from Kubernetes 1.18")
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Starting a simple pod with `kubectl run`
-
-- `kubectl run` is convenient to start a single pod
-
-- We need to specify at least a *name* and the image we want to use
-
-- Optionally, we can specify the command to run in the pod
-
-.exercise[
-
-- Let's ping the address of `localhost`, the loopback interface:
-  ```bash
-  kubectl run pingpong --image alpine ping 127.0.0.1
-  ```
-
-<!-- ```hide kubectl wait pod --selector=run=pingpong --for condition=ready``` -->
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## What do we see?
-
-- In Kubernetes 1.18+, the output tells us that a Pod is created:
-  ```
-  pod/pingpong created
-  ```
-
-- In Kubernetes 1.17-, the output is much more verbose:
-  ```
-  kubectl run --generator=deployment/apps.v1 is DEPRECATED 
-  and will be removed in a future version. Use kubectl run 
-  --generator=run-pod/v1 or kubectl create instead.
-  deployment.apps/pingpong created
-  ```
-
-- There is a deprecation warning ...
-
-- ... And a Deployment was created instead of a Pod
-
-🤔 What does that mean?
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Show me all you got!
-
-- What resources were created by `kubectl run`?
-
-.exercise[
-
-- Let's ask Kubernetes to show us *all* the resources:
-  ```bash
-  kubectl get all
-  ```
-
-]
-
-Note: `kubectl get all` is a lie. It doesn't show everything.
-
-(But it shows a lot of "usual suspects", i.e. commonly used resources.)
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## The situation with Kubernetes 1.18+
-
-```
-NAME           READY   STATUS    RESTARTS   AGE
-pod/pingpong   1/1     Running   0          9s
-
-NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
-service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   3h30m
-```
-
-We wanted a pod, we got a pod, named `pingpong`. Great!
-
-(We can ignore `service/kubernetes`, it was already there before.)
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## The situation with Kubernetes 1.17-
-
-```
-NAME                            READY   STATUS        RESTARTS   AGE
-pod/pingpong-6ccbc77f68-kmgfn   1/1     Running       0          11s
-
-NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
-service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   3h45
-
-NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/pingpong   1/1     1            1           11s
-
-NAME                                  DESIRED   CURRENT   READY   AGE
-replicaset.apps/pingpong-6ccbc77f68   1         1         1       11s
-```
-
-Our pod is not named `pingpong`, but `pingpong-xxxxxxxxxxx-yyyyy`.
-
-We have a Deployment named `pingpong`, and an extra Replica Set, too. What's going on?
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## From Deployment to Pod
-
-We have the following resources:
-
-- `deployment.apps/pingpong`
-
-  This is the Deployment that we just created.
-
-- `replicaset.apps/pingpong-xxxxxxxxxx`
-
-  This is a Replica Set created by this Deployment.
-
-- `pod/pingpong-xxxxxxxxxx-yyyyy`
-
-  This is a *pod* created by the Replica Set.
-
-Let's explain what these things are.
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Pod
-
-- Can have one or multiple containers
-
-- Runs on a single node
-
-  (Pod cannot "straddle" multiple nodes)
-
-- Pods cannot be moved
-
-  (e.g. in case of node outage)
-
-- Pods cannot be scaled
-
-  (except by manually creating more Pods)
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-class: extra-details
-
-## Pod details
-
-- A Pod is not a process; it's an environment for containers
-
-  - it cannot be "restarted"
-
-  - it cannot "crash"
-
-- The containers in a Pod can crash
-
-- They may or may not get restarted
-
-  (depending on Pod's restart policy)
-
-- If all containers exit successfully, the Pod ends in "Succeeded" phase
-
-- If some containers fail and don't get restarted, the Pod ends in "Failed" phase
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Replica Set
-
-- Set of identical (replicated) Pods
-
-- Defined by a pod template + number of desired replicas
-
-- If there are not enough Pods, the Replica Set creates more
-
-  (e.g. in case of node outage; or simply when scaling up)
-
-- If there are too many Pods, the Replica Set deletes some
-
-  (e.g. if a node was disconnected and comes back; or when scaling down)
-
-- We can scale up/down a Replica Set
-
-  - we update the manifest of the Replica Set
-
-  - as a consequence, the Replica Set controller creates/deletes Pods
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Deployment
-
-- Replica Sets control *identical* Pods
-
-- Deployments are used to roll out different Pods
-
-  (different image, command, environment variables, ...)
-
-- When we update a Deployment with a new Pod definition:
-
-  - a new Replica Set is created with the new Pod definition
-
-  - that new Replica Set is progressively scaled up
-
-  - meanwhile, the old Replica Set(s) is(are) scaled down
-
-- This is a *rolling update*, minimizing application downtime
-
-- When we scale up/down a Deployment, it scales up/down its Replica Set
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## `kubectl run` through the ages
-
-- When we want to run an app on Kubernetes, we *generally* want a Deployment
-
-- Up to Kubernetes 1.17, `kubectl run` created a Deployment
-
-  - it could also create other things, by using special flags
-
-  - this was powerful, but potentially confusing
-
-  - creating a single Pod was done with `kubectl run --restart=Never`
-
-  - other resources could also be created with `kubectl create ...`
-
-- From Kubernetes 1.18, `kubectl run` creates a Pod
-
-  - other kinds of resources can still be created with `kubectl create`
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Creating a Deployment the proper way
-
-- Let's destroy that `pingpong` app that we created
-
-- Then we will use `kubectl create deployment` to re-create it
-
-.exercise[
-
-- On Kubernetes 1.18+, delete the Pod named `pingpong`:
-  ```bash
-  kubectl delete pod pingpong
-  ```
-
-- On Kubernetes 1.17-, delete the Deployment named `pingpong`:
-  ```bash
-  kubectl delete deployment pingpong
-  ```
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Running `ping` in a Deployment
-
-<!-- ##VERSION## -->
-
-- When using `kubectl create deployment`, we cannot indicate the command to execute
-
-  (at least, not in Kubernetes 1.18; but that changed in Kubernetes 1.19)
-
-- We can:
-
-  - write a custom YAML manifest for our Deployment
-
---
-
-  - (yeah right ... too soon!)
-
---
-
-  - use an image that has the command to execute baked in
-
-  - (much easier!)
-
---
-
-- We will use the image `ahmedgabercod/ping`
-
-  (it has a default command of `ping 127.0.0.1`)
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Creating a Deployment running `ping`
-
-- Let's create a Deployment named `pingpong`
-
-- It will use the image `ahmedgabercod/ping`
-
-.exercise[
-
-- Create the Deployment:
-  ```bash
-  kubectl create deployment pingpong --image=ahmedgabercod/ping
-  ```
-
-- Check the resources that were created:
-  ```bash
-  kubectl get all
-  ```
-
-<!-- ```hide kubectl wait pod --selector=app=pingpong --for condition=ready ``` -->
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-class: extra-details
-
-## In Kubernetes 1.19
-
-- Since Kubernetes 1.19, we can specify the command to run
-
-- The command must be passed after two dashes:
-  ```bash
-  kubectl create deployment pingpong --image=alpine -- ping 127.1
-  ```
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Viewing container output
-
-- Let's use the `kubectl logs` command
-
-- We will pass either a *pod name*, or a *type/name*
-
-  (E.g. if we specify a deployment or replica set, it will get the first pod in it)
-
-- Unless specified otherwise, it will only show logs of the first container in the pod
-
-  (Good thing there's only one in ours!)
-
-.exercise[
-
-- View the result of our `ping` command:
-  ```bash
-  kubectl logs deploy/pingpong
-  ```
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Streaming logs in real time
-
-- Just like `docker logs`, `kubectl logs` supports convenient options:
-
-  - `-f`/`--follow` to stream logs in real time (à la `tail -f`)
-
-  - `--tail` to indicate how many lines you want to see (from the end)
-
-  - `--since` to get logs only after a given timestamp
-
-.exercise[
-
-- View the latest logs of our `ping` command:
-  ```bash
-  kubectl logs deploy/pingpong --tail 1 --follow
-  ```
-
-- Stop it with Ctrl-C
-
-<!--
-```wait seq=3```
-```keys ^C```
--->
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Scaling our application
-
-- We can create additional copies of our container (I mean, our pod) with `kubectl scale`
-
-.exercise[
-
-- Scale our `pingpong` deployment:
-  ```bash
-  kubectl scale deploy/pingpong --replicas 3
-  ```
-
-- Note that this command does exactly the same thing:
-  ```bash
-  kubectl scale deployment pingpong --replicas 3
-  ```
-
-- Check that we now have multiple pods:
-  ```bash
-  kubectl get pods
-  ```
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-class: extra-details
-
-## Scaling a Replica Set
-
-- What if we scale the Replica Set instead of the Deployment?
-
-- The Deployment would notice it right away and scale back to the initial level
-
-- The Replica Set makes sure that we have the right numbers of Pods
-
-- The Deployment makes sure that the Replica Set has the right size
-
-  (conceptually, it delegates the management of the Pods to the Replica Set)
-
-- This might seem weird (why this extra layer?) but will soon make sense
-
-  (when we will look at how rolling updates work!)
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Streaming logs of multiple pods
-
-- What happens if we try `kubectl logs` now that we have multiple pods?
-
-.exercise[
-
-  ```bash
-  kubectl logs deploy/pingpong --tail 3
-  ```
-
-]
-
-`kubectl logs` will warn us that multiple pods were found.
-
-It is showing us only one of them.
-
-We'll see later how to address that shortcoming.
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Resilience
-
-- The *deployment* `pingpong` watches its *replica set*
-
-- The *replica set* ensures that the right number of *pods* are running
-
-- What happens if pods disappear?
-
-.exercise[
-
-- In a separate window, watch the list of pods:
-  ```bash
-  watch kubectl get pods
-  ```
-
-<!--
-```wait Every 2.0s```
-```tmux split-pane -v```
--->
-
-- Destroy the pod currently shown by `kubectl logs`:
-  ```
-  kubectl delete pod pingpong-xxxxxxxxxx-yyyyy
-  ```
-
-<!--
-```tmux select-pane -t 0```
-```copy pingpong-[^-]*-.....```
-```tmux last-pane```
-```keys kubectl delete pod ```
-```paste```
-```key ^J```
-```check```
-```key ^D```
-```key ^C```
--->
-
-]
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## What happened?
-
-- `kubectl delete pod` terminates the pod gracefully
-
-  (sending it the TERM signal and waiting for it to shutdown)
-
-- As soon as the pod is in "Terminating" state, the Replica Set replaces it
-
-- But we can still see the output of the "Terminating" pod in `kubectl logs`
-
-- Until 30 seconds later, when the grace period expires
-
-- The pod is then killed, and `kubectl logs` exits
-
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-
-## Lifecycle
-
-- What happens when a Pod gets created?
-
---
-
-- Pod phases:
-
---
-
-  - Pending
-
---
-
-  - Running
-
---
-
-  - Succeeded
-
---
-
-  - Failed
-
---
-
-  - Unknown
-
---
-
-  - CrashLoopBackOff
-
----
-.debug[[k8s/kubectl-run.md](file:///home/xeon/urgent/slides/k8s/kubectl-run.md)]
----
-## 19,000 words
-
-They say, "a picture is worth one thousand words."
-
-The following 19 slides show what really happens when we run:
-
-```bash
-kubectl create deployment web --image=nginx
-```
-
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/01.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/02.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/03.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/04.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/05.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/06.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/07.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/08.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/09.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/10.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/11.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/12.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/13.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/14.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/15.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/16.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/17.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/18.svg)
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-class: pic
-![](images/kubectl-create-deployment-slideshow/19.svg)
-
-.debug[[k8s/deploymentslideshow.md](file:///home/xeon/urgent/slides/k8s/deploymentslideshow.md)]
----
-## Declarative vs Imperative
-
-- With Kubernetes, we cannot say: "run this container"
-
-- All we can do is write a *spec* and push it to the API server
-
-  (by creating a resource like e.g. a Pod or a Deployment)
-
-- The API server will validate that spec (and reject it if it's invalid)
-
-- Then it will store it in etcd
-
-- A *controller* will "notice" that spec and act upon it
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## Reconciling state
-
-- Watch for the `spec` fields in the YAML files later!
-
-- The *spec* describes *how we want the thing to be*
-
-- Kubernetes will *reconcile* the current state with the spec
-  <br/>(technically, this is done by a number of *controllers*)
-
-- When we want to change some resource, we update the *spec*
-
-- Kubernetes will then *converge* that resource
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## Deploying with YAML
-
-- So far, we created resources with the following commands:
-
-  - `kubectl run`
-
-  - `kubectl create deployment`
-
-- We can also create resources directly with YAML manifests
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## `kubectl apply` vs `create`
-
-- `kubectl create -f whatever.yaml`
-
-  - creates resources if they don't exist
-
-  - if resources already exist, don't alter them
-    <br/>(and display error message)
-
-- `kubectl apply -f whatever.yaml`
-
-  - creates resources if they don't exist
-
-  - if resources already exist, update them
-    <br/>(to match the definition provided by the YAML file)
-
-  - stores the manifest as an *annotation* in the resource
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## Creating multiple resources
-
-- The manifest can contain multiple resources separated by `---`
-
-```yaml
- kind: ...
- apiVersion: ...
- metadata: ...
-   name: ...
- ...
- ---
- kind: ...
- apiVersion: ...
- metadata: ...
-   name: ...
- ...
-```
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## Deleting resources
-
-- We can also use a YAML file to *delete* resources
-
-- `kubectl delete -f ...` will delete all the resources mentioned in a YAML file
-
-  (useful to clean up everything that was created by `kubectl apply -f ...`)
-
-- The definitions of the resources don't matter
-
-  (just their `kind`, `apiVersion`, and `name`)
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## Pruning resources
-
-- We can also tell `kubectl` to remove old resources
-
-- This is done with `kubectl apply -f ... --prune`
-
-- It will remove resources that don't exist in the YAML file(s)
-
-- But only if they were created with `kubectl apply` in the first place
-
-  (technically, if they have an annotation `kubectl.kubernetes.io/last-applied-configuration`)
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
----
-
-## YAML as source of truth
-
-- Imagine the following workflow:
-
-  - do not use `kubectl run`, `kubectl create deployment`, `kubectl expose` ...
-
-  - define everything with YAML
-
-  - `kubectl apply -f ... --prune --all` that YAML
-
-  - keep that YAML under version control
-
-  - enforce all changes to go through that YAML (e.g. with pull requests)
-
-- Our version control system now has a full history of what we deploy
-
-- Compares to "Infrastructure-as-Code", but for app deployments
-
-
-
-
-.debug[[k8s/declarative.md](file:///home/xeon/urgent/slides/k8s/declarative.md)]
 ---
 
 class: pic
@@ -2569,7 +1951,7 @@ class: title
  Volumes
 
 .nav[
-[Previous section](#toc-deployments)
+[Previous section](#toc-labels-and-annotations)
 |
 [Back to table of contents](#toc-module-0)
 |
@@ -2589,64 +1971,9 @@ class: title
 
   - share files and directories between containers and their host
 
-  - centralize configuration information in Kubernetes and expose it to containers
-
-  - manage credentials and secrets and expose them securely to containers
-
-  - store persistent data for stateful services
-
-  - access storage systems (like Ceph, EBS, NFS, Portworx, and many others)
-
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
 
-class: extra-details
-
-## Kubernetes volumes vs. Docker volumes
-
-- Kubernetes and Docker volumes are very similar
-
-  (the [Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volumes/) says otherwise ...
-  <br/>
-  but it refers to Docker 1.7, which was released in 2015!)
-
-- Docker volumes allow us to share data between containers running on the same host
-
-- Kubernetes volumes allow us to share data between containers in the same pod
-
-- Both Docker and Kubernetes volumes enable access to storage systems
-
-- Kubernetes volumes are also used to expose configuration and secrets
-
-- Docker has specific concepts for configuration and secrets
-  <br/>
-  (but under the hood, the technical implementation is similar)
-
-- If you're not familiar with Docker volumes, you can safely ignore this slide!
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Volumes ≠ Persistent Volumes
-
-- Volumes and Persistent Volumes are related, but very different!
-
-- *Volumes*:
-
-  - appear in Pod specifications (we'll see that in a few slides)
-
-  - do not exist as API resources (**cannot** do `kubectl get volumes`)
-
-- *Persistent Volumes*:
-
-  - are API resources (**can** do `kubectl get persistentvolumes`)
-
-  - correspond to concrete volumes (e.g. on a SAN, EBS, etc.)
-
-  - cannot be associated with a Pod directly; but through a Persistent Volume Claim
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
 class: pic
 
 ![pervolumes](images/pervolumes.png)
@@ -2654,19 +1981,13 @@ class: pic
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
 
-## Adding a volume to a Pod
+## Adding a volume
 
-- We will start with the simplest Pod manifest we can find
+- Volumes are added in two places:
 
-- We will add a volume to that Pod manifest
+  - at the Pod level (to declare the volume)
 
-- We will mount that volume in a container in the Pod
-
-- By default, this volume will be an `emptyDir`
-
-  (an empty directory)
-
-- It will "shadow" the directory where it's mounted
+  - at the container level (to mount the volume)
 
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
@@ -2683,59 +2004,6 @@ spec:
   - name: nginx
     image: nginx
 ```
-
-This is a MVP! (Minimum Viable Pod😉)
-
-It runs a single NGINX container.
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Trying the basic pod
-
-.exercise[
-
-- Create the Pod:
-  ```bash
-  kubectl create -f nginx-1-without-volume.yaml
-  ```
-
-<!-- ```bash kubectl wait pod/nginx-without-volume --for condition=ready ``` -->
-
-- Get its IP address:
-  ```bash
-  IPADDR=$(kubectl get pod nginx-without-volume -o jsonpath={.status.podIP})
-  ```
-
-- Send a request with curl:
-  ```bash
-  curl $IPADDR
-  ```
-
-]
-
-(We should see the "Welcome to NGINX" page.)
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Adding a volume
-
-- We need to add the volume in two places:
-
-  - at the Pod level (to declare the volume)
-
-  - at the container level (to mount the volume)
-
-- We will declare a volume named `www`
-
-- No type is specified, so it will default to `emptyDir`
-
-  (as the name implies, it will be initialized as an empty directory at pod creation)
-
-- In that pod, there is also a container named `nginx`
-
-- That container mounts the volume `www` to path `/usr/share/nginx/html/`
 
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
@@ -2757,54 +2025,6 @@ spec:
     - name: www
       mountPath: /usr/share/nginx/html/
 ```
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Trying the Pod with a volume
-
-.exercise[
-
-- Create the Pod:
-  ```bash
-  kubectl create -f nginx-2-with-volume.yaml
-  ```
-
-<!-- ```bash kubectl wait pod/nginx-with-volume --for condition=ready ``` -->
-
-- Get its IP address:
-  ```bash
-  IPADDR=$(kubectl get pod nginx-with-volume -o jsonpath={.status.podIP})
-  ```
-
-- Send a request with curl:
-  ```bash
-  curl $IPADDR
-  ```
-
-]
-
-(We should now see a "403 Forbidden" error page.)
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Populating the volume with another container
-
-- Let's add another container to the Pod
-
-- Let's mount the volume in *both* containers
-
-- That container will populate the volume with static files
-
-- NGINX will then serve these static files
-
-- To populate the volume, we will clone the Spoon-Knife repository
-
-  - this repository is https://github.com/octocat/Spoon-Knife
-
-  - it's very popular (more than 100K stars!)
-
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
 
@@ -2827,113 +2047,13 @@ spec:
       mountPath: /usr/share/nginx/html/
   - name: git
     image: alpine
-    command: [ "sh", "-c", "apk add git && git clone https://github.com/octocat/Spoon-Knife /www" ]
+    command: [ "sh", "-c", "echo "Hello" > /www/index.html" ]
     volumeMounts:
     - name: www
       mountPath: /www/
   restartPolicy: OnFailure
 ```
 ]
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Sharing a volume, explained
-
-- We added another container to the pod
-
-- That container mounts the `www` volume on a different path (`/www`)
-
-- It uses the `alpine` image
-
-- When started, it installs `git` and clones the `octocat/Spoon-Knife` repository
-
-  (that repository contains a tiny HTML website)
-
-- As a result, NGINX now serves this website
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Trying the shared volume
-
-- This one will be time-sensitive!
-
-- We need to catch the Pod IP address *as soon as it's created*
-
-- Then send a request to it *as fast as possible*
-
-.exercise[
-
-- Watch the pods (so that we can catch the Pod IP address)
-  ```bash
-  kubectl get pods -o wide --watch
-  ```
-
-<!--
-```wait NAME```
-```tmux split-pane -v```
--->
-
-]
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Shared volume in action
-
-.exercise[
-
-- Create the pod:
-  ```bash
-  kubectl create -f nginx-3-with-git.yaml
-  ```
-
-<!--
-```bash kubectl wait pod/nginx-with-git --for condition=initialized```
-```bash IP=$(kubectl get pod nginx-with-git -o jsonpath={.status.podIP})```
--->
-
-- As soon as we see its IP address, access it:
-  ```bash
-  curl `$IP`
-  ```
-
-<!-- ```bash /bin/sleep 5``` -->
-
-- A few seconds later, the state of the pod will change; access it again:
-  ```bash
-  curl `$IP`
-  ```
-
-]
-
-The first time, we should see "403 Forbidden".
-
-The second time, we should see the HTML file from the Spoon-Knife repository.
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Explanations
-
-- Both containers are started at the same time
-
-- NGINX starts very quickly
-
-  (it can serve requests immediately)
-
-- But at this point, the volume is empty
-
-  (NGINX serves "403 Forbidden")
-
-- The other containers installs git and clones the repository
-
-  (this takes a bit longer)
-
-- When the other container is done, the volume holds the repository
-
-  (NGINX serves the HTML file)
 
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
@@ -3031,42 +2151,6 @@ spec:
     persistentVolumeClaim:
       claimName: my-claim
 ```
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Creating and using Persistent Volume Claims
-
-- PVCs can be created manually and used explicitly
-
-  (as shown on the previous slides)
-
-- They can also be created and used through Stateful Sets
-
-  (this will be shown later)
-
-.debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
----
-
-## Lifecycle of Persistent Volume Claims
-
-- When a PVC is created, it starts existing in "Unbound" state
-
-  (without an associated volume)
-
-- A Pod referencing an unbound PVC will not start
-
-  (the scheduler will wait until the PVC is bound to place it)
-
-- A special controller continuously monitors PVCs to associate them with PVs
-
-- If no PV is available, one must be created:
-
-  - manually (by operator intervention)
-
-  - using a *dynamic provisioner* (more on that later)
-
----
 .debug[[k8s/volumes.md](file:///home/xeon/urgent/slides/k8s/volumes.md)]
 ---
 
@@ -3094,7 +2178,7 @@ class: title
 ---
 # Configmaps | Secrets
 
-- Some applications need to be configured (obviously!)
+- Some applications need to be configured 
 
 - There are many ways for our code to pick up configuration:
 
@@ -3104,9 +2188,7 @@ class: title
 
   - configuration files
 
-  - configuration servers (getting configuration from a database, an API...)
-
-  - ... and more (because programmers can be very creative!)
+  - configuration servers 
 
 - How can we do these things with containers and Kubernetes?
 
@@ -3117,204 +2199,13 @@ class: title
 
 - There are many ways to pass configuration to code running in a container:
 
-  - baking it into a custom image
-
   - command-line arguments
 
   - environment variables
 
   - injecting configuration files
 
-  - exposing it over the Kubernetes API
 
-  - configuration servers
-
-- Let's review these different strategies!
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Baking custom images
-
-- Put the configuration in the image
-
-  (it can be in a configuration file, but also `ENV` or `CMD` actions)
-
-- It's easy! It's simple!
-
-- Unfortunately, it also has downsides:
-
-  - multiplication of images
-
-  - different images for dev, staging, prod ...
-
-  - minor reconfigurations require a whole build/push/pull cycle
-
-- Avoid doing it unless you don't have the time to figure out other options
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Command-line arguments
-
-- Pass options to `args` array in the container specification
-
-- Example ([source](https://github.com/coreos/pods/blob/master/kubernetes.yaml#L29)): 
-  ```yaml
-      args: 
-        - "--data-dir=/var/lib/etcd"
-        - "--advertise-client-urls=http://127.0.0.1:2379"
-        - "--listen-client-urls=http://127.0.0.1:2379"
-        - "--listen-peer-urls=http://127.0.0.1:2380"
-        - "--name=etcd"
-  ```
-
-- The options can be passed directly to the program that we run ...
-
-  ... or to a wrapper script that will use them to e.g. generate a config file
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Command-line arguments, pros & cons
-
-- Works great when options are passed directly to the running program
-
-  (otherwise, a wrapper script can work around the issue)
-
-- Works great when there aren't too many parameters
-
-  (to avoid a 20-lines `args` array)
-
-- Requires documentation and/or understanding of the underlying program
-
-  ("which parameters and flags do I need, again?")
-
-- Well-suited for mandatory parameters (without default values)
-
-- Not ideal when we need to pass a real configuration file anyway
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Environment variables
-
-- Pass options through the `env` map in the container specification
-
-- Example:
-  ```yaml
-      env:
-      - name: ADMIN_PORT
-        value: "8080"
-      - name: ADMIN_AUTH
-        value: Basic
-      - name: ADMIN_CRED
-        value: "admin:0pensesame!"
-  ```
-
-.warning[`value` must be a string! Make sure that numbers and fancy strings are quoted.]
-
-🤔 Why this weird `{name: xxx, value: yyy}` scheme? It will be revealed soon!
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## The downward API
-
-- In the previous example, environment variables have fixed values
-
-- We can also use a mechanism called the *downward API*
-
-- The downward API allows exposing pod or container information
-
-  - either through special files (we won't show that for now)
-
-  - or through environment variables
-
-- The value of these environment variables is computed when the container is started
-
-- Remember: environment variables won't (can't) change after container start
-
-- Let's see a few concrete examples!
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Exposing the pod's namespace
-
-```yaml
-    - name: MY_POD_NAMESPACE
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.namespace
-```
-
-- Useful to generate FQDN of services
-
-  (in some contexts, a short name is not enough)
-
-- For instance, the two commands should be equivalent:
-  ```
-  curl api-backend
-  curl api-backend.$MY_POD_NAMESPACE.svc.cluster.local
-  ```
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Exposing the pod's IP address
-
-```yaml
-    - name: MY_POD_IP
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
-```
-
-- Useful if we need to know our IP address
-
-  (we could also read it from `eth0`, but this is more solid)
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Exposing the container's resource limits
-
-```yaml
-    - name: MY_MEM_LIMIT
-      valueFrom:
-        resourceFieldRef:
-          containerName: test-container
-          resource: limits.memory
-```
-
-- Useful for runtimes where memory is garbage collected
-
-- Example: the JVM
-
-  (the memory available to the JVM should be set with the `-Xmx ` flag)
-
-- Best practice: set a memory limit, and pass it to the runtime
-
-- Note: recent versions of the JVM can do this automatically
-
-  (see [JDK-8146115](https://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8146115))
-  and
-  [this blog post](https://very-serio.us/2017/12/05/running-jvms-in-kubernetes/)
-  for detailed examples)
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## More about the downward API
-
-- [This documentation page](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/) tells more about these environment variables
-
-- And [this one](https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/) explains the other way to use the downward API
-
-  (through files that get created in the container filesystem)
-
-- That second link also includes a list of all the fields that can be used with the downward API
 
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
@@ -3324,20 +2215,6 @@ class: title
 - Works great when the running program expects these variables
 
 - Works great for optional parameters with reasonable defaults
-
-  (since the container image can provide these defaults)
-
-- Sort of auto-documented
-
-  (we can see which environment variables are defined in the image, and their values)
-
-- Can be (ab)used with longer values ...
-
-- ... You *can* put an entire Tomcat configuration file in an environment ...
-
-- ... But *should* you?
-
-(Do it if you really need to, we're not judging! But we'll see better ways.)
 
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
@@ -3354,15 +2231,11 @@ class: title
 
   (values are arbitrary strings)
 
-- We can think about them in (at least) two different ways:
+- We can think about them in two different ways:
 
   - as holding entire configuration file(s)
 
   - as holding individual configuration parameters
-
-*Note: to hold sensitive information, we can use "Secrets", which
-are another type of resource behaving very much like configmaps.
-We'll cover them just after!*
 
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
@@ -3375,20 +2248,6 @@ We'll cover them just after!*
 
 - Value = content of the file
 
-- There can be one key/value pair, or as many as necessary
-
-  (for complex apps with multiple configuration files)
-
-- Examples:
-  ```
-  # Create a configmap with a single key, "app.conf"
-  kubectl create configmap my-app-config --from-file=app.conf
-  # Create a configmap with a single key, "app.conf" but another file
-  kubectl create configmap my-app-config --from-file=app.conf=app-prod.conf
-  # Create a configmap with multiple keys (one per file in the config.d directory)
-  kubectl create configmap my-app-config --from-file=config.d/
-  ```
-
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
 
@@ -3400,17 +2259,6 @@ We'll cover them just after!*
 
 - Value = value of the parameter
 
-- Examples:
-  ```
-  # Create a configmap with two keys
-  kubectl create cm my-app-config \
-      --from-literal=foreground=red \
-      --from-literal=background=blue
-  
-  # Create a configmap from a file containing key=val pairs
-  kubectl create cm my-app-config \
-      --from-env-file=app.conf
-  ```
 
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
@@ -3419,122 +2267,9 @@ We'll cover them just after!*
 
 - Configmaps can be exposed as plain files in the filesystem of a container
 
-  - this is achieved by declaring a volume and mounting it in the container
-
-  - this is particularly effective for configmaps containing whole files
 
 - Configmaps can be exposed as environment variables in the container
 
-  - this is achieved with the downward API
-
-  - this is particularly effective for configmaps containing individual parameters
-
-- Let's see how to do both!
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Passing a configuration file with a configmap
-
-- We will start a load balancer powered by HAProxy
-
-- We will use the [official `haproxy` image](https://hub.docker.com/_/haproxy/)
-
-- It expects to find its configuration in `/usr/local/etc/haproxy/haproxy.cfg`
-
-- We will provide a simple HAproxy configuration, `k8s/haproxy.cfg`
-
-- It listens on port 80, and load balances connections between IBM and Google
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Creating the configmap
-
-.exercise[
-
-- Create a configmap named `haproxy` and holding the configuration file:
-  ```bash
-  kubectl create configmap haproxy --from-file=haproxy.cfg
-  ```
-
-- Check what our configmap looks like:
-  ```bash
-  kubectl get configmap haproxy -o yaml
-  ```
-
-]
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Using the configmap
-
-We are going to use the following pod definition:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: haproxy
-spec:
-  volumes:
-  - name: config
-    configMap:
-      name: haproxy
-  containers:
-  - name: haproxy
-    image: haproxy
-    volumeMounts:
-    - name: config
-      mountPath: /usr/local/etc/haproxy/
-```
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Using the configmap
-
-.exercise[
-
-- Create the HAProxy pod:
-  ```bash
-  kubectl apply -f haproxy.yaml
-  ```
-
-<!-- ```hide kubectl wait pod haproxy --for condition=ready``` -->
-
-- Check the IP address allocated to the pod:
-  ```bash
-  kubectl get pod haproxy -o wide
-  IP=$(kubectl get pod haproxy -o json | jq -r .status.podIP)
-  ```
-
-]
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-
-## Testing our load balancer
-
-- The load balancer will send:
-
-  - half of the connections to Google
-
-  - the other half to IBM
-
-.exercise[
-
-- Access the load balancer a few times:
-  ```bash
-  curl $IP
-  curl $IP
-  curl $IP
-  ```
-
-]
-
-We should see connections served by Google, and others served by IBM.
 
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
@@ -3545,18 +2280,6 @@ We should see connections served by Google, and others served by IBM.
 
 - Secrets and Configmaps work almost the same way
 
-  (we'll expose the differences on the next slide)
-
-- The *intent* is different, though:
-
-  *"You should use secrets for things which are actually secret like API keys, 
-  credentials, etc., and use config map for not-secret configuration data."*
-
-  *"In the future there will likely be some differentiators for secrets like rotation or support for backing the secret API w/ HSMs, etc."*
-
-  (Source: [the author of both features](https://stackoverflow.com/a/36925553/580281
-))
-
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
 ## Differences between configmaps and secrets
@@ -3566,42 +2289,11 @@ We should see connections served by Google, and others served by IBM.
   - keep in mind that this is just *encoding*, not *encryption*
 
   - it is very easy to extract and decode secrets
-
-- [Secrets can be encrypted at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)
-
-- With RBAC, we can authorize a user to access configmaps, but not secrets
-
-  (since they are two different kinds of resources)
-
-.debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
----
-class: extra-details
-
-## Immutable ConfigMaps and Secrets
-
-- Since Kubernetes 1.19, it is possible to mark a ConfigMap or Secret as *immutable*
-
-  ```bash
-  kubectl patch configmap xyz --patch='{"immutable": true}'
-  ```
-
-- This brings performance improvements when using lots of ConfigMaps and Secrets
-
-  (lots = tens of thousands)
-
-- Once a ConfigMap or Secret has been marked as immutable:
-
-  - its content cannot be changed anymore
-  - the `immutable` field can't be changed back either
-  - the only way to change it is to delete and re-create it
-  - Pods using it will have to be re-created as well
-
 .debug[[k8s/configuration.md](file:///home/xeon/urgent/slides/k8s/configuration.md)]
 ---
 ## Exercise —
 
 - Create a configMap called 'options' with the value server=local 
-- Create a new nginx pod that loads the value from variable 'var5' in an env variable called 'option'
 - Create a json file with the following content:
 ```
 {
@@ -3613,6 +2305,8 @@ class: extra-details
    - Save the file as secret.json
    - Create a generic secret object from the file
    - Extract the password value from the secret and store it in password.txt
+
+- Validate your resources
 
 .debug[[k8s/exercise-configmap.md](file:///home/xeon/urgent/slides/k8s/exercise-configmap.md)]
 ---

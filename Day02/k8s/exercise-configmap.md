@@ -1,7 +1,6 @@
 ## Exercise —
 
 - Create a configMap called 'options' with the value server=local 
-- Create a new nginx pod that loads the value from variable 'var5' in an env variable called 'option'
 - Create a json file with the following content:
 ```
 {
@@ -13,3 +12,5 @@
    - Save the file as secret.json
    - Create a generic secret object from the file
    - Extract the password value from the secret and store it in password.txt
+
+- Validate your resources

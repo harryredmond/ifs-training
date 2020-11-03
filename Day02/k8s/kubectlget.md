@@ -284,14 +284,6 @@ class: extra-details
 
 ]
 
---
-
-*You know what ... This `kube-system` thing looks suspicious.*
-
-*In fact, I'm pretty sure it showed up earlier, when we did:*
-
-`kubectl describe node node1`
-
 ---
 
 ## Accessing namespaces
@@ -314,8 +306,6 @@ class: extra-details
 
 ]
 
-*Here are our system pods!*
-
 ---
 
 ## What are all these control plane pods?
@@ -326,15 +316,11 @@ class: extra-details
 
 - `kube-controller-manager` and `kube-scheduler` are other control plane components
 
-- `coredns` provides DNS-based service discovery ([replacing kube-dns as of 1.11](https://kubernetes.io/blog/2018/07/10/coredns-ga-for-kubernetes-cluster-dns/))
+- `coredns` provides DNS-based service discovery 
 
 - `kube-proxy` is the (per-node) component managing port mappings and such
 
-- `weave` is the (per-node) component managing the network overlay
-
 - the `READY` column indicates the number of containers in each pod
-
-  (1 for most pods, but `weave` has 2, for instance)
 
 ---
 
@@ -364,11 +350,10 @@ class: extra-details
 
 - We can use `-A`/`--all-namespaces` with most commands that manipulate multiple objects
 
-- Examples:
 
-  - `kubectl delete` can delete resources across multiple namespaces
+- `kubectl delete` can delete resources across multiple namespaces
 
-  - `kubectl label` can add/remove/update labels across multiple namespaces
+- `kubectl label` can add/remove/update labels across multiple namespaces
 
 ---
 
@@ -483,118 +468,5 @@ class: extra-details
 [KEP-0009]: https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/0009-node-heartbeat.md
 [node controller documentation]: https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller
 
----
-
-## Services
-
-- A *service* is a stable endpoint to connect to "something"
-
-  (In the initial proposal, they were called "portals")
-
-.exercise[
-
-- List the services on our cluster with one of these commands:
-  ```bash
-  kubectl get services
-  kubectl get svc
-  ```
-
-]
-
---
-
-There is already one service on our cluster: the Kubernetes API itself.
-
----
-
-## ClusterIP services
-
-- A `ClusterIP` service is internal, available from the cluster only
-
-- This is useful for introspection from within containers
-
-.exercise[
-
-- Try to connect to the API:
-  ```bash
-  curl -k https://`10.96.0.1`
-  ```
-
-  - `-k` is used to skip certificate verification
-
-  - Make sure to replace 10.96.0.1 with the CLUSTER-IP shown by `kubectl get svc`
-
-]
-
-The command above should either time out, or show an authentication error. Why?
-
----
-
-## Time out
-
-- Connections to ClusterIP services only work *from within the cluster*
-
-- If we are outside the cluster, the `curl` command will probably time out
-
-  (Because the IP address, e.g. 10.96.0.1, isn't routed properly outside the cluster)
-
-- This is the case with most "real" Kubernetes clusters
-
-- To try the connection from within the cluster, we can use [shpod](https://github.com/jpetazzo/shpod)
-
----
-
-## Authentication error
-
-This is what we should see when connecting from within the cluster:
-```json
-$ curl -k https://10.96.0.1
-{
-  "kind": "Status",
-  "apiVersion": "v1",
-  "metadata": {
-
-  },
-  "status": "Failure",
-  "message": "forbidden: User \"system:anonymous\" cannot get path \"/\"",
-  "reason": "Forbidden",
-  "details": {
-
-  },
-  "code": 403
-}
-```
-
----
-
-## Explanations
-
-- We can see `kind`, `apiVersion`, `metadata`
-
-- These are typical of a Kubernetes API reply
-
-- Because we *are* talking to the Kubernetes API
-
-- The Kubernetes API tells us "Forbidden"
-
-  (because it requires authentication)
-
-- The Kubernetes API is reachable from within the cluster
-
-  (many apps integrating with Kubernetes will use this)
-
----
-
-## DNS integration
-
-- Each service also gets a DNS record
-
-- The Kubernetes DNS resolver is available *from within pods*
-
-  (and sometimes, from within nodes, depending on configuration)
-
-- Code running in pods can connect to services using their name
-
-  (e.g. https://servicename/...)
 
   
